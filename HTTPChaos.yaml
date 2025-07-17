@@ -1,0 +1,22 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: weekly-http-chaos
+  namespace: chaos-testing
+spec:
+  schedule: "0 2 * * 3"
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  type: HTTPChaos
+  httpChaos:
+    target: pod
+    mode: one
+    selector:
+      namespaces:
+        - default
+    port: 8080
+    path: "/api/v1"
+    method: GET
+    abort: true
+    statusCode: 500
+    duration: "5m"

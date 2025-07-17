@@ -1,0 +1,21 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: weekly-cpu-stress
+  namespace: chaos-testing
+spec:
+  schedule: "0 2 * * 3"
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  type: StressChaos
+  stressChaos:
+    mode: one
+    selector:
+      namespaces:
+        - default
+    stressors:
+      cpu:
+        workers: 4
+        load: 80
+        options: ["--cpu 4", "--timeout 300"]
+    duration: "5m"

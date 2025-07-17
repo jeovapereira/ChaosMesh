@@ -1,0 +1,18 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: weekly-time-chaos
+  namespace: chaos-testing
+spec:
+  schedule: "0 2 * * 3"
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  type: TimeChaos
+  timeChaos:
+    mode: one
+    selector:
+      namespaces:
+        - default
+    timeOffset: "-1h"
+    clockIds: ["CLOCK_REALTIME"]
+    duration: "5m"

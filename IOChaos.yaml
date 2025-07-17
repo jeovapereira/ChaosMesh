@@ -1,0 +1,21 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: weekly-io-chaos
+  namespace: chaos-testing
+spec:
+  schedule: "0 2 * * 3"
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  type: IOChaos
+  ioChaos:
+    action: latency
+    mode: one
+    selector:
+      namespaces:
+        - default
+    volumePath: /var/run
+    path: "/var/run/**/*.log"
+    delay: "100ms"
+    percent: 50
+    duration: "10m"

@@ -1,0 +1,21 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: weekly-network-latency
+  namespace: chaos-testing
+spec:
+  schedule: "0 2 * * 3"
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  type: NetworkChaos
+  networkChaos:
+    action: delay
+    mode: all
+    selector:
+      namespaces:
+        - default
+    delay:
+      latency: "100ms"
+      correlation: "100"
+      jitter: "10ms"
+    duration: "10m"

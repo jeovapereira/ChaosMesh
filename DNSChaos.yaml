@@ -1,0 +1,19 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: weekly-dns-chaos
+  namespace: chaos-testing
+spec:
+  schedule: "0 2 * * 3"
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  type: DNSChaos
+  dnsChaos:
+    action: error
+    mode: all
+    selector:
+      namespaces:
+        - default
+    patterns:
+      - "example.com"
+    duration: "5m"
