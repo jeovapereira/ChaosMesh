@@ -1,0 +1,95 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: weekly-chaos-experiments
+  namespace: chaos-testing
+spec:
+  entry: chaos-experiments
+  templates:
+    - name: chaos-experiments
+      templateType: Serial
+      children:
+        - pod-failure
+        - network-latency
+        - cpu-stress
+        - io-chaos
+
+    # Pod Failure Experiment
+    - name: pod-failure
+      templateType: Schedule
+      schedule:
+        schedule: "0 2 * * 3"
+        startingDeadlineSeconds: 60
+        concurrencyPolicy: Forbid
+        historyLimit: 5
+        type: PodChaos
+        podChaos:
+          action: pod-failure
+          mode: all
+          selector:
+            namespaces:
+              - default
+          duration: "5m"
+
+    # Network Latency Experiment
+    - name: network-latency
+      templateType: Schedule
+      schedule:
+        schedule: "0 2 * * 3"
+        startingDeadlineSeconds: 60
+        concurrencyPolicy: Forbid
+        historyLimit: 5
+        type: NetworkChaos
+        networkChaos:
+          action: delay
+          mode: all
+          selector:
+            namespaces:
+              - default
+          delay:
+            latency: "100ms"
+            correlation: "100"
+            jitter: "10ms"
+          duration: "10m"
+
+    # CPU Stress Experiment
+    - name: cpu-stress
+      templateType: Schedule
+      schedule:
+        schedule: "0 2 * * 3"
+        startingDeadlineSeconds: 60
+        concurrencyPolicy: Forbid
+        historyLimit: 5
+        type: StressChaos
+        stressChaos:
+          mode: one
+          selector:
+            namespaces:
+              - default
+          stressors:
+            cpu:
+              workers: 4
+              load: 80
+              options: ["--cpu 4", "--timeout 300"]
+          duration: "5m"
+
+    # IO Chaos Experiment
+    - name: io-chaos
+      templateType: Schedule
+      schedule:
+        schedule: "0 2 * * 3"
+        startingDeadlineSeconds: 60
+        concurrencyPolicy: Forbid
+        historyLimit: 5
+        type: IOChaos
+        ioChaos:
+          action: latency
+          mode: one
+          selector:
+            namespaces:
+              - default
+          volumePath: /var/run
+          path: "/var/run/**/*.log"
+          delay: "100ms"
+          percent: 50
+          duration: "10m"
