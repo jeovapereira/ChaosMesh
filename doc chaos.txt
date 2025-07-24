@@ -1,0 +1,537 @@
+Visão Geral 
+
+Esta documentação fornece um guia completo para a equipe sobre como utilizar o Chaos Mesh, uma plataforma de Chaos Engineering projetada para Kubernetes, para testar a resiliência de aplicações em ambientes de produção e staging. 
+
+1. Introdução ao Chaos Mesh 
+
+1.1 O que é Chaos Mesh? 
+
+Chaos Mesh é uma plataforma de Chaos Engineering de código aberto que ajuda a equipe a simular falhas em ambientes Kubernetes para verificar a resiliência e estabilidade das aplicações. 
+
+1.2 Benefícios 
+
+Teste de tolerância a falhas em ambientes controlados 
+
+Identificação de pontos fracos antes que ocorram em produção 
+
+Integração nativa com Kubernetes 
+
+Interface web e CLI para gerenciamento 
+
+2. Pré-requisitos 
+
+Cluster Kubernetes (versão 1.12 ou superior) 
+
+kubectl configurado e acessível 
+
+Helm (para instalação) 
+
+Acesso administrativo ao cluster (para instalação) 
+
+3. Instalação do Chaos Mesh 
+
+3.1 Usando Helm 
+
+bash 
+
+helm repo add chaos-mesh https://charts.chaos-mesh.org 
+helm repo update 
+kubectl create ns chaos-testing 
+helm install chaos-mesh chaos-mesh/chaos-mesh --namespace=chaos-testing --set dashboard.create=true 
+
+3.2 Verificando a instalação 
+
+bash 
+
+kubectl get pods -n chaos-testing -l app.kubernetes.io/instance=chaos-mesh 
+
+4. Acessando o Dashboard 
+
+4.1 Expor o serviço 
+
+bash 
+
+kubectl port-forward -n chaos-testing svc/chaos-dashboard 2333:2333 
+
+4.2 Acessar via navegador 
+
+Acesse http://localhost:2333 no navegador. 
+
+5. Tipos de Experimentos Suportados 
+
+5.1 Falhas de Pod 
+
+Pod Failure: Simula a falha de um pod 
+
+Pod Kill: Mata um pod aleatoriamente 
+
+5.2 Falhas de Rede 
+
+Network Delay: Introduz atraso na rede 
+
+Network Loss: Simula perda de pacotes 
+
+Network Duplication: Duplica pacotes de rede 
+
+5.3 Falhas de DNS 
+
+DNS Fault: Injeta erros de DNS 
+
+5.4 Falhas de CPU/Memória 
+
+CPU Stress: Consome recursos de CPU 
+
+Memory Stress: Consome memória 
+
+5.5 Falhas de Sistema de Arquivos 
+
+I/O Fault: Simula erros de I/O 
+
+6. Criando um Experimento 
+
+6.1 Via Dashboard 
+
+Acesse o dashboard 
+
+Navegue para "Experiments" > "New Experiment" 
+
+Selecione o tipo de experimento 
+
+Configure os parâmetros 
+
+Defina o escopo (namespaces, labels) 
+
+Submeta o experimento 
+
+6.2 Via YAML 
+
+Exemplo de arquivo YAML para um experimento de falha de pod: 
+
+yaml 
+
+apiVersion: chaos-mesh.org/v1alpha1 
+kind: PodChaos 
+metadata: 
+  name: pod-failure-example 
+  namespace: chaos-testing 
+spec: 
+  action: pod-failure 
+  mode: one 
+  duration: '30s' 
+  selector: 
+    namespaces: 
+      - default 
+    labelSelectors: 
+      'app': 'nginx' 
+
+Aplicar o experimento: 
+
+bash 
+
+kubectl apply -f pod-failure-example.yaml 
+
+7. Monitorando Experimentos 
+
+7.1 Via Dashboard 
+
+Visualização em tempo real do status 
+
+Histórico de experimentos 
+
+Métricas de impacto 
+
+7.2 Via CLI 
+
+bash 
+
+kubectl get podchaos -n chaos-testing 
+kubectl describe podchaos pod-failure-example -n chaos-testing 
+
+8. Boas Práticas 
+
+Comece pequeno: Inicie com experimentos de baixo impacto 
+
+Defina objetivos claros: Saiba o que você está testando 
+
+Monitore cuidadosamente: Tenha métricas antes, durante e após os experimentos 
+
+Tenha um plano de rollback: Saiba como abortar rapidamente 
+
+Comunique a equipe: Avise quando estiver executando experimentos em ambientes compartilhados 
+
+9. Segurança e Permissões 
+
+9.1 RBAC 
+
+Configure roles específicas para membros da equipe: 
+
+yaml 
+
+apiVersion: rbac.authorization.k8s.io/v1 
+kind: Role 
+metadata: 
+  name: chaos-experimenter 
+  namespace: chaos-testing 
+rules: 
+- apiGroups: [""] 
+  resources: ["pods"] 
+  verbs: ["get", "list", "watch"] 
+- apiGroups: ["chaos-mesh.org"] 
+  resources: ["*"] 
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"] 
+
+10. Integração com CI/CD 
+
+Exemplo de etapa em pipeline GitLab: 
+
+yaml 
+
+chaos_test: 
+  stage: test 
+  image: alpine/k8s:1.18.2 
+  script: 
+    - kubectl apply -f chaos-experiment.yaml 
+    - sleep 30 # wait for experiment duration 
+    - kubectl delete -f chaos-experiment.yaml 
+    # Add verification steps here 
+
+11. Solução de Problemas Comuns 
+
+11.1 Experimentos não são injetados 
+
+Verifique os logs do chaos-controller-manager 
+
+Confira se os selectores correspondem a pods existentes 
+
+11.2 Dashboard não acessível 
+
+Verifique se o serviço está rodando 
+
+Confira as configurações de porta e firewall 
+
+12. Recursos Adicionais 
+
+Documentação Oficial 
+
+Repositório GitHub 
+
+Exemplos de Experimentos 
+
+Anexos 
+
+Fluxograma de Processo de Chaos Engineering 
+
+Modelo de Plano de Experimento 
+
+Checklist de Segurança 
+
+
+Criando Experimentos com Chaos Mesh
+1. Introdução à Criação de Experimentos
+Esta seção fornece um guia passo a passo para criar diferentes tipos de experimentos no Chaos Mesh, tanto através do Dashboard quanto via arquivos YAML.
+
+2. Estrutura Básica de um Experimento
+Todos os experimentos no Chaos Mesh compartilham uma estrutura comum:
+
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: [Tipo do Experimento]  # PodChaos, NetworkChaos, etc.
+metadata:
+  name: [nome-do-experimento]
+  namespace: chaos-testing
+spec:
+  action: [ação-específica]  # pod-failure, netem-delay, etc.
+  mode: [modo de execução]   # one, all, fixed, fixed-percent, random-max-percent
+  duration: "[duração]"      # Ex: "30s", "5m", "1h"
+  selector:
+    # Definição do escopo do experimento
+3. Criando Experimentos Via Dashboard
+3.1 Passo a Passo Básico
+Acesse o Chaos Dashboard (http://localhost:2333)
+
+Navegue até "Experiments" > "New Experiment"
+
+Selecione o tipo de experimento desejado
+
+Preencha os parâmetros necessários
+
+Defina o escopo (namespaces, labels, annotations)
+
+Revise e clique em "Submit"
+
+3.2 Configurações Avançadas no Dashboard
+Agendamento: Defina horários específicos para execução
+
+Condições de Disparo: Configure métricas para iniciar o experimento automaticamente
+
+Filtros Específicos: Selecione pods por node, região ou outras características
+
+4. Tipos de Experimentos com Exemplos Práticos
+4.1 Experimentos de Pod
+4.1.1 Pod Failure (Falha de Pod)
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: webapp-pod-failure
+spec:
+  action: pod-failure
+  mode: fixed-percent
+  value: "50"  # 50% dos pods selecionados
+  duration: "1m"
+  selector:
+    namespaces:
+      - production
+    labelSelectors:
+      'app.kubernetes.io/component': 'frontend'
+4.1.2 Pod Kill (Terminação de Pod)
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: kill-db-pods
+spec:
+  action: pod-kill
+  mode: fixed
+  value: "3"  # Mata exatamente 3 pods
+  selector:
+    namespaces:
+      - database
+    labelSelectors:
+      'app': 'mongodb'
+4.2 Experimentos de Rede
+4.2.1 Network Delay (Atraso de Rede)
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay-example
+spec:
+  action: delay
+  mode: one
+  duration: "2m"
+  delay:
+    latency: "500ms"  # 500ms de atraso
+    correlation: "25"
+    jitter: "100ms"
+  direction: both
+  selector:
+    namespaces:
+      - payment-service
+    labelSelectors:
+      'app': 'payment-gateway'
+4.2.2 Network Loss (Perda de Pacotes)
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: packet-loss
+spec:
+  action: loss
+  mode: fixed-percent
+  value: "30"  # 30% de perda de pacotes
+  loss:
+    loss: "30"
+    correlation: "10"
+  selector:
+    namespaces:
+      - monitoring
+    podSelectors:
+      'app': 'prometheus'
+4.3 Experimentos de DNS
+4.3.1 DNS Fault
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: DNSChaos
+metadata:
+  name: dns-fault-example
+spec:
+  action: error
+  mode: all
+  duration: "5m"
+  selector:
+    namespaces:
+      - checkout
+  domainNamePatterns:
+    - "*.external-service.com"
+  dnsError:
+    errorCode: "3"  # NXDOMAIN
+4.4 Experimentos de CPU/Memória
+4.4.1 CPU Stress
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: cpu-stress-test
+spec:
+  mode: fixed-percent
+  value: "50"  # 50% dos pods selecionados
+  stressors:
+    cpu:
+      workers: 4  # Número de workers de stress
+      load: 80    # Porcentagem de carga CPU
+  duration: "3m"
+  selector:
+    namespaces:
+      - data-processing
+    labelSelectors:
+      'job-type': 'batch'
+4.4.2 Memory Stress
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: memory-stress-test
+spec:
+  mode: fixed
+  value: "2"  # 2 pods específicos
+  stressors:
+    memory:
+      workers: 1
+      size: "1GB"  # Aloca 1GB de memória
+  duration: "10m"
+  selector:
+    fieldSelectors:
+      'metadata.name': 'cache-service-*'
+5. Configurações Avançadas
+5.1 Experimentos em Fases (Multi-stage)
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: multi-stage-test
+spec:
+  schedule: "*/5 * * * *"  # A cada 5 minutos
+  historyLimit: 2
+  concurrencyPolicy: "Forbid"
+  pipeline:
+    - name: network-delay-stage
+      template: network-delay
+      duration: "1m"
+    - name: pod-failure-stage
+      template: pod-failure
+      duration: "30s"
+  templates:
+    - name: network-delay
+      templateType: NetworkChaos
+      embeddedTemplate: |
+        action: delay
+        delay:
+          latency: "1s"
+        selector:
+          namespaces: ["production"]
+    - name: pod-failure
+      templateType: PodChaos
+      embeddedTemplate: |
+        action: pod-failure
+        selector:
+          namespaces: ["production"]
+5.2 Condicionais e Gatilhos
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: conditional-pod-kill
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces: ["production"]
+  conditions:
+    - type: "Prometheus"
+      address: "http://prometheus:9090"
+      query: "up{job='mysql'} == 0"  # Executa apenas se MySQL estiver inativo
+6. Validação de Experimentos
+6.1 Verificando o Status
+bash
+# Listar todos os experimentos
+kubectl get chaos -n chaos-testing
+
+# Ver detalhes de um experimento específico
+kubectl describe podchaos/webapp-pod-failure -n chaos-testing
+6.2 Monitorando Efeitos
+Logs do Chaos Controller:
+
+bash
+kubectl logs -l app.kubernetes.io/component=controller-manager -n chaos-testing
+Métricas da Aplicação: Verifique dashboards do Prometheus/Grafana
+
+Logs da Aplicação: Monitore como a aplicação está lidando com as falhas
+
+7. Boas Práticas para Criação de Experimentos
+Nomeclatura Clara: Use nomes que descrevam o experimento (ex: "frontend-pod-failure-production")
+
+Duração Conservadora: Comece com durações curtas (30s-1min)
+
+Escopo Delimitado: Restrinja a namespaces/labels específicos
+
+Documentação Interna: Registre objetivo e hipóteses do experimento
+
+Versionamento: Armazene arquivos YAML no controle de versão
+
+8. Templates para Casos de Uso Comuns
+8.1 Teste de Disponibilidade
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: availability-test
+spec:
+  action: pod-failure
+  mode: fixed-percent
+  value: "33"  # 1/3 dos pods
+  duration: "2m"
+  selector:
+    namespaces: ["production"]
+    labelSelectors:
+      "app.kubernetes.io/instance": "high-availability-app"
+8.2 Teste de Latência entre Microservices
+yaml
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: inter-service-latency
+spec:
+  action: delay
+  mode: all
+  duration: "5m"
+  delay:
+    latency: "2s"
+  direction: both
+  selector:
+    namespaces: ["payments"]
+    labelSelectors:
+      "app": "payment-service"
+  target:
+    selector:
+      namespaces: ["database"]
+      labelSelectors:
+        "app": "postgresql"
+    mode: all
+9. Limpeza de Experimentos
+Para remover um experimento:
+
+bash
+# Via kubectl
+kubectl delete -f experimento.yaml
+
+# Via Dashboard
+1. Navegue até "Experiments"
+2. Localize o experimento
+3. Clique em "Delete"
+10. Troubleshooting na Criação
+Problema: Experimento não é injetado
+
+Verifique os logs do chaos-daemon no namespace alvo
+
+Confira se os selectores correspondem a pods existentes
+
+Verifique as permissões RBAC
+
+Problema: Efeitos não são revertidos após a duração
+
+Verifique o status do experimento (kubectl get chaos)
+
+Confira os logs do chaos-controller-manager
+
+Forçar deleção manual se necessário
