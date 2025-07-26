@@ -1,0 +1,21 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: pod-failure-weekly
+  namespace: chaos-testing
+spec:
+  schedule: "0 1 * * 1"  # Toda segunda-feira à meia-noite
+  historyLimit: 5
+  concurrencyPolicy: "Allow"
+  type: "PodChaos"
+  podChaos:
+    selector:
+      namespaces:
+        - digital-kyc-services-uat
+    action: pod-failure
+    mode: all
+    params:
+      podFailure:
+        duration: "5m"  # Duração da falha do pod
+    scheduler:
+      cron: "@every 1m"  # Pausa de 1 minuto entre falhas
